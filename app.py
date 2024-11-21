@@ -53,21 +53,40 @@ if sectors_selected:
         stock_options += sectors[sector]
     selected_options = st.multiselect('Select stocks:', stock_options)
 
+# def calculate_weekly_returns(ticker, stock_name):
+#     data = yf.download(ticker, start=start_date, end=end_date)
+#     data.index = pd.to_datetime(data.index)
+#     weekly_data = data['Adj Close'].resample('W').ffill()
+#     weekly_return = weekly_data.pct_change() * 100
+#     result = pd.DataFrame({f'{stock_name}_Weekly Return': weekly_return})
+#     return result, data
+
+# def cal_week(ticker, stock_name):
+#     data = yf.download(ticker, start=start_date, end=end_date)
+#     data.index = pd.to_datetime(data.index)
+#     weekly_data = data['Adj Close'].resample('W').ffill()
+#     weekly_return = weekly_data.pct_change() * 100
+#     result = pd.DataFrame({f'{stock_name}_Weekly_Return': weekly_return})
+#     return result
+
 def calculate_weekly_returns(ticker, stock_name):
     data = yf.download(ticker, start=start_date, end=end_date)
     data.index = pd.to_datetime(data.index)
     weekly_data = data['Adj Close'].resample('W').ffill()
-    weekly_return = weekly_data.pct_change() * 100
-    result = pd.DataFrame({f'{stock_name}_Weekly Return': weekly_return})
+    weekly_return = weekly_data.pct_change().to_numpy().flatten() * 100  # Ensure 1D
+    # Create DataFrame with a single column and explicit index
+    result = pd.DataFrame({f'{stock_name}_Weekly Return': weekly_return}, index=weekly_data.index)
     return result, data
 
 def cal_week(ticker, stock_name):
     data = yf.download(ticker, start=start_date, end=end_date)
     data.index = pd.to_datetime(data.index)
     weekly_data = data['Adj Close'].resample('W').ffill()
-    weekly_return = weekly_data.pct_change() * 100
-    result = pd.DataFrame({f'{stock_name}_Weekly_Return': weekly_return})
+    weekly_return = weekly_data.pct_change().to_numpy().flatten() * 100  # Ensure 1D
+    # Create DataFrame with a single column and explicit index
+    result = pd.DataFrame({f'{stock_name}_Weekly_Return': weekly_return}, index=weekly_data.index)
     return result
+
 
 def highlight_negatives(data, ax, mask):
     for i in range(data.shape[0]):
@@ -224,7 +243,7 @@ def get_stock_metrics(ticker):
     price_book_ratio = info.get('priceToBook', 'N/A')
     enterprise_val_rev_ratio = info.get('enterpriseToRevenue', 'N/A')
     enterprise_val_ebitda_ratio = info.get('enterpriseToEbitda', 'N/A')
-    
+    beta = info.get('beta', 'N/A')
     metrics = {
         'STD_DEV': std_dev,
         'MARKETCAPITAL_BILLIONS': market_cap / 1e9 if market_cap != 'N/A' else 'N/A',
@@ -235,7 +254,8 @@ def get_stock_metrics(ticker):
         'PRICE_SALES_RATIO': price_sales_ratio,
         'PRICE_BOOK_RATIO': price_book_ratio,
         'ENTERPRISE_VAL_REV_RATIO': enterprise_val_rev_ratio,
-        'ENTERPRISE_VAL_EBITDA_RATIO': enterprise_val_ebitda_ratio
+        'ENTERPRISE_VAL_EBITDA_RATIO': enterprise_val_ebitda_ratio,
+        'BETA': beta
     }
     
     return metrics
