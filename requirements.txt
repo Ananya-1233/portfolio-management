@@ -4,3 +4,4 @@ seaborn
 yfinance
 mplfinance
 matplotlib
+scipy
