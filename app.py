@@ -1,10 +1,13 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
+from scipy.stats import norm
 import matplotlib.pyplot as plt
 import yfinance as yf
-import mplfinance as mpf
 import seaborn as sns
+from datetime import datetime, date, timedelta
 # Define sectors and stock options (sample data)
+st.title("Stock Data Acquisition Tool")
 sectors = {
     'Pharmaceuticals': ['DR. REDDY LABORATORIES', 'SUN PHARMACEUTICAL INDUSTRIES', 'CIPLA'],
     'Automotive': ['TATA MOTORS', 'MAHINDRA & MAHINDRA', 'MARUTI SUZUKI INDIA'],
@@ -39,8 +42,18 @@ mapping = {
 index_ticker = "^BSESN"  # S&P BSE SENSEX
 
 # Define the date range
-start_date = "2024-01-01"
-end_date = "2024-06-30"
+# start_date = "2024-01-01"
+# end_date = "2024-06-30
+
+# start_date = st.date_input("Select a start date")
+# end_date = date.today()
+
+weeks_requested = st.number_input("Enter the number of weeks of data needed:", min_value=1, value=10, step=1)
+
+# Calculate the start date based on the number of weeks requested
+end_date = date.today()
+start_date = end_date - timedelta(weeks=weeks_requested)
+st.write(f"Fetching data from {start_date} to {end_date}")
 
 # Create the sector multiselect dropdown
 sectors_selected = st.multiselect('Select sectors:', list(sectors.keys()))
@@ -53,40 +66,21 @@ if sectors_selected:
         stock_options += sectors[sector]
     selected_options = st.multiselect('Select stocks:', stock_options)
 
-# def calculate_weekly_returns(ticker, stock_name):
-#     data = yf.download(ticker, start=start_date, end=end_date)
-#     data.index = pd.to_datetime(data.index)
-#     weekly_data = data['Adj Close'].resample('W').ffill()
-#     weekly_return = weekly_data.pct_change() * 100
-#     result = pd.DataFrame({f'{stock_name}_Weekly Return': weekly_return})
-#     return result, data
-
-# def cal_week(ticker, stock_name):
-#     data = yf.download(ticker, start=start_date, end=end_date)
-#     data.index = pd.to_datetime(data.index)
-#     weekly_data = data['Adj Close'].resample('W').ffill()
-#     weekly_return = weekly_data.pct_change() * 100
-#     result = pd.DataFrame({f'{stock_name}_Weekly_Return': weekly_return})
-#     return result
-
 def calculate_weekly_returns(ticker, stock_name):
     data = yf.download(ticker, start=start_date, end=end_date)
     data.index = pd.to_datetime(data.index)
     weekly_data = data['Adj Close'].resample('W').ffill()
-    weekly_return = weekly_data.pct_change().to_numpy().flatten() * 100  # Ensure 1D
-    # Create DataFrame with a single column and explicit index
-    result = pd.DataFrame({f'{stock_name}_Weekly Return': weekly_return}, index=weekly_data.index)
+    weekly_return = weekly_data.pct_change() * 100
+    result = pd.DataFrame({f'{stock_name}_Weekly Return': weekly_return})
     return result, data
 
 def cal_week(ticker, stock_name):
     data = yf.download(ticker, start=start_date, end=end_date)
     data.index = pd.to_datetime(data.index)
     weekly_data = data['Adj Close'].resample('W').ffill()
-    weekly_return = weekly_data.pct_change().to_numpy().flatten() * 100  # Ensure 1D
-    # Create DataFrame with a single column and explicit index
-    result = pd.DataFrame({f'{stock_name}_Weekly_Return': weekly_return}, index=weekly_data.index)
+    weekly_return = weekly_data.pct_change() * 100
+    result = pd.DataFrame({f'{stock_name}_Weekly_Return': weekly_return})
     return result
-
 
 def highlight_negatives(data, ax, mask):
     for i in range(data.shape[0]):
@@ -95,7 +89,7 @@ def highlight_negatives(data, ax, mask):
                 ax.add_patch(plt.Rectangle((j, i), 1, 1, fill=False, edgecolor='black', lw=2))
 
 # Add a submit button
-if st.button('Give weekly returns'):
+if st.button('Calculate weekly returns for selected stocks'):
     if selected_options:
         st.write(f'You chose: {", ".join(selected_options)}')
         
@@ -109,6 +103,7 @@ if st.button('Give weekly returns'):
         # Download BSE index data
         index_weekly_returns, _ = calculate_weekly_returns(index_ticker, 'BSE')
         consolidated_data = consolidated_data.join(index_weekly_returns, how='inner')
+        consolidated_data = consolidated_data.round(2)
 
         # Plotting the line graph of all selected stocks' weekly returns in one chart
         fig, ax = plt.subplots(figsize=(10, 6))
@@ -132,7 +127,7 @@ if st.button('Give weekly returns'):
         # Provide download link for the consolidated data
         csv = consolidated_data.to_csv().encode('utf-8')
         st.download_button(
-            label="Download consolidated data as CSV",
+            label="Download consolidated data",
             data=csv,
             file_name='consolidated_portfolio_returns.csv',
             mime='text/csv',
@@ -140,20 +135,10 @@ if st.button('Give weekly returns'):
          # Plotting the correlation heatmap
         corr = consolidated_data.corr()
         st.write(corr)
-        # styled_corr_matrix = corr.style.applymap(highlight_negatives)
-        # fig, ax = plt.subplots(figsize=(10, 8))
-        # sns.heatmap(corr, annot=True, cmap='coolwarm', ax=ax)
-        # ax.set_title('Correlation Heatmap of Weekly Returns')
-        # st.pyplot(fig)
-
+    
         cov = consolidated_data.cov()
         st.write(cov)
-        # styled_cov_matrix = cov.style.applymap(highlight_negatives)
-        # # cov.to_csv('covariance.csv')
-        # fig, ax = plt.subplots(figsize=(10, 8))
-        # sns.heatmap( cov, annot=True, cmap='coolwarm', ax=ax)
-        # ax.set_title('Covariance Heatmap of Weekly Returns')
-        # st.pyplot(fig)
+    
         fig, ax = plt.subplots(figsize=(10, 8))
         corr_matrix = corr.values
         sns.heatmap(corr, annot=True, fmt=".2f", cmap='coolwarm', center=0, ax=ax, mask=None)
@@ -172,7 +157,7 @@ if st.button('Give weekly returns'):
     else:
         st.write("Please select at least one stock.")
 
-if st.button('Calculate weekly returns and download CSV'):
+if st.button('Download weekly returns for all stocks'):
     all_weekly_returns = pd.DataFrame()
 
     for sector, stocks in sectors.items():
@@ -191,19 +176,18 @@ if st.button('Calculate weekly returns and download CSV'):
 
     all_weekly_returns.columns = [col.replace(' ', '_') for col in all_weekly_returns.columns]
 
-    
-
     # Drop columns that are not weekly returns
     weekly_return_cols = [col for col in all_weekly_returns.columns if '_Weekly_Return' in col]
     all_weekly_returns = all_weekly_returns[weekly_return_cols]
     all_weekly_returns.dropna(how='all', inplace=True)
     all_weekly_returns.insert(0, 'Serial_Number', range(1, len(all_weekly_returns) + 1))
+    all_weekly_returns = all_weekly_returns.round(2)
     st.write(all_weekly_returns)
 
     # Provide download link for the consolidated data
     csv = all_weekly_returns.to_csv().encode('utf-8')
     st.download_button(
-        label="Download consolidated data as CSV",
+        label="Download consolidated data for all stocks",
         data=csv,
         file_name='All_Stocks_Weekly_Return.csv',
         mime='text/csv',
@@ -270,11 +254,56 @@ def get_all_metrics():
             metrics['STOCK'] = stock
             metrics['INDUSTRY'] = sector
             all_metrics.append(metrics)
-    
-    return pd.DataFrame(all_metrics)
+    df = pd.DataFrame(all_metrics)
+    df_last = df.columns[-2]
+    df = df[[df_last] + list(df.columns[:-2])]
+    return pd.DataFrame(df)
 
-# Streamlit app layout
-st.title("Stock Metrics Calculation")
+def plot_all_columns_normal_distribution():
+    # File uploader
+    uploaded_file = st.file_uploader("Upload a CSV file", type="csv")
+    
+    # Check if a file has been uploaded
+    if uploaded_file is not None:
+        # Load the data
+        data = pd.read_csv(uploaded_file)
+        st.write("Data Preview:", data.head())
+
+        # Filter numeric columns
+        numeric_columns = data.select_dtypes(include=['float64', 'int64']).columns
+        
+        if len(numeric_columns) > 0:
+            # Plot the normal distribution for each numeric column
+            plt.figure(figsize=(12, 8))
+            
+            for column in numeric_columns:
+                # Extract the data for the column
+                column_data = data[column].dropna()
+
+                # Fit a normal distribution to the column data
+                mean, std_dev = norm.fit(column_data)
+
+                # Generate a range of values for plotting the normal curve
+                x = np.linspace(-10,10,1000)
+               # x = np.linspace(column_data.min(), column_data.max(), 100)
+                y = norm.pdf(x, mean, std_dev)
+
+                # Plot the normal distribution curve
+                plt.plot(x, y, label=f'{column} (μ={mean:.2f}, σ={std_dev:.2f})')
+            
+            # Customize the plot
+            plt.title("Normal Distribution of Numeric Columns")
+            plt.xlabel("Value")
+            plt.ylabel("Density")
+            plt.legend(loc = 'upper center', title="Columns")
+            st.pyplot(plt)
+        else:
+            st.write("No numeric columns found in the CSV file.")
+    else:
+        st.write("Please upload a CSV file.")
+
+# Run the function in Streamlit
+plot_all_columns_normal_distribution()
 
 # Button to calculate metrics
 if st.button('Calculate Stock Metrics'):
