@@ -71,7 +71,7 @@ def calculate_weekly_returns(ticker, stock_name):
     data.index = pd.to_datetime(data.index)
     weekly_data = data['Adj Close'].resample('W').ffill()
     weekly_return = weekly_data.pct_change() * 100
-    result = pd.DataFrame({f'{stock_name}_Weekly Return': [weekly_return]}, index=['Row 1'])
+    result = pd.DataFrame({f'{stock_name}_Weekly Return': weekly_return})
     return result, data
 
 def cal_week(ticker, stock_name):
@@ -79,7 +79,7 @@ def cal_week(ticker, stock_name):
     data.index = pd.to_datetime(data.index)
     weekly_data = data['Adj Close'].resample('W').ffill()
     weekly_return = weekly_data.pct_change() * 100
-    result = pd.DataFrame({f'{stock_name}_Weekly_Return': [weekly_return]}, index=['Row 1'])
+    result = pd.DataFrame({f'{stock_name}_Weekly_Return': weekly_return})
     return result
 
 def highlight_negatives(data, ax, mask):
@@ -104,7 +104,8 @@ if st.button('Calculate weekly returns for selected stocks'):
         index_weekly_returns, _ = calculate_weekly_returns(index_ticker, 'BSE')
         consolidated_data = consolidated_data.join(index_weekly_returns, how='inner')
         consolidated_data = consolidated_data.round(2)
-
+        consolidated_data[f'{selected_option}_Weekly Return'] = consolidated_data[f'{selected_option}_Weekly Return'].apply(
+            lambda x: x[0] if isinstance(x, (list, np.ndarray)) and len(x) > 0 else x)
         # Plotting the line graph of all selected stocks' weekly returns in one chart
         fig, ax = plt.subplots(figsize=(10, 6))
 
