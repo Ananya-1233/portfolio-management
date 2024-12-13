@@ -71,7 +71,8 @@ def calculate_weekly_returns(ticker, stock_name):
     data.index = pd.to_datetime(data.index)
     weekly_data = data['Adj Close'].resample('W').ffill()
     weekly_return = weekly_data.pct_change() * 100
-    result = pd.DataFrame({f'{stock_name}_Weekly Return': weekly_return})
+    # result = pd.DataFrame({f'{stock_name}_Weekly Return': weekly_return})
+    result = pd.DataFrame({f'{stock_name}_Weekly Return': weekly_return}, index=weekly_data.index)
     return result, data
 
 def cal_week(ticker, stock_name):
@@ -98,9 +99,6 @@ if st.button('Calculate weekly returns for selected stocks'):
         for selected_option in selected_options:
             stock_ticker = mapping[selected_option]
             stock_weekly_returns, _ = calculate_weekly_returns(stock_ticker, selected_option)
-            stock_weekly_returns_df = pd.DataFrame({
-                f'{stock_ticker}_Weekly Return': [stock_weekly_returns]
-                }, index=[selected_option])
             consolidated_data = pd.concat([consolidated_data, stock_weekly_returns], axis=1)
 
         # Download BSE index data
