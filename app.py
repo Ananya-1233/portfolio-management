@@ -71,6 +71,7 @@ def calculate_weekly_returns(ticker, stock_name):
     data.index = pd.to_datetime(data.index)
     weekly_data = data['Adj Close'].resample('W').ffill()
     weekly_return = weekly_data.pct_change() * 100
+    weekly_return = weekly_return.squeeze()
     # result = pd.DataFrame({f'{stock_name}_Weekly Return': weekly_return})
     result = pd.DataFrame({f'{stock_name}_Weekly Return': weekly_return}, index=weekly_data.index)
     return result, data
